@@ -39,6 +39,12 @@ extern nav_msgs::Path path;
 extern ros::Publisher pub_pose_graph;
 extern int IMAGE_ROW, IMAGE_COL;
 
+////////////////////////////////
+// add by Shengkai
+// pub_benchmark for performance analysis
+extern ros::Publisher pub_benchmark_odometry, pub_benchmark_path;
+////////////////////////////////
+
 void registerPub(ros::NodeHandle &n);
 
 void pubLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, const Eigen::Vector3d &V, double t);
@@ -64,3 +70,9 @@ void pubKeyframe(const Estimator &estimator);
 void pubRelocalization(const Estimator &estimator);
 
 void pubCar(const Estimator & estimator, const std_msgs::Header &header);
+
+////////////////////////////////
+// add by Shengkai
+// pub_benchmark for performance analysis
+void pubBenchmark(const Estimator &estimator, const std_msgs::Header &header, const std::vector<BenchmarkData> &benchmark);
+////////////////////////////////

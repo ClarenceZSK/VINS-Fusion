@@ -66,6 +66,29 @@ extern int FLOW_BACK;
 /////////////////////////////////
 // add by Shengkai
 extern int TEXTURELESS;
+struct BenchmarkData
+{
+    BenchmarkData(FILE *f)
+    {
+        if (fscanf(f, " %lf,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f", &t,
+               &px, &py, &pz,
+               &qw, &qx, &qy, &qz,
+               &vx, &vy, &vz,
+               &wx, &wy, &wz,
+               &ax, &ay, &az) != EOF)
+        {
+            t /= 1e9;
+        }
+    }
+    double t;
+    float px, py, pz;
+    float qw, qx, qy, qz;
+    float vx, vy, vz;
+    float wx, wy, wz;
+    float ax, ay, az;
+};
+extern std::vector<BenchmarkData> BENCHMARK_DATA;
+void readBenchmarkData(std::string benchmark_file);
 ////////////////////////////////
 
 void readParameters(std::string config_file);

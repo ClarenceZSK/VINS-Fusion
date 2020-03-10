@@ -403,7 +403,11 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackTe
             if(textureless_n_pts.size() == textureless_track_num)
                 break;
         }
-        n_pts = textureless_n_pts;
+        n_pts.clear();
+        for (auto &p : textureless_n_pts)
+        {
+            n_pts.push_back(p);
+        }
         printf("feature cut from %d to %d\n", origin_feature_num, (int)n_pts.size());
         /////////////////////////////////////////////////////////////////
         for (auto &p : n_pts)

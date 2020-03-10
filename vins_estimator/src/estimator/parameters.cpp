@@ -49,6 +49,7 @@ int FLOW_BACK;
  * Add by Shengkai
 ****************************************/
 int TEXTURELESS;
+vector<BenchmarkData> BENCHMARK_DATA;
 
 template <typename T>
 T readParam(ros::NodeHandle &n, std::string name)
@@ -90,7 +91,7 @@ void readParameters(std::string config_file)
     SHOW_TRACK = fsSettings["show_track"];
     FLOW_BACK = fsSettings["flow_back"];
 
-    TEXTURELESS = 1;
+    TEXTURELESS = fsSettings["textureless"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
@@ -202,4 +203,27 @@ void readParameters(std::string config_file)
     }
 
     fsSettings.release();
+}
+///////////////////////
+// add by Shengkai
+void readBenchmarkData(std::string benchmark_file)
+{
+    std::cout << "load ground truth " << benchmark_file << std::endl;
+    FILE *f = fopen(benchmark_file.c_str(), "r");
+    if (f==NULL)
+    {
+      ROS_WARN("can't load ground truth; wrong path");
+      //std::cerr << "can't load ground truth; wrong path " << csv_file << std::endl;
+      return;
+    }
+    char tmp[10000];
+    if (fgets(tmp, 10000, f) == NULL)
+    {
+        ROS_WARN("can't load ground truth; no data available");
+    }
+    while (!feof(f))
+        BENCHMARK_DATA.emplace_back(f);
+    fclose(f);
+    BENCHMARK_DATA.pop_back();
+    ROS_INFO("Benchmark Data loaded: %d", (int)BENCHMARK_DATA.size());
 }

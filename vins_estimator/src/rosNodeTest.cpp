@@ -240,6 +240,12 @@ int main(int argc, char **argv)
 
     readParameters(config_file);
     estimator.setParameter();
+    //////////////////////////////
+    // add by Shengkai
+    // pub_benchmark for performance analysis
+    string benchmark_file = argv[2];
+    printf("benchmark_file: %s\n", argv[2]);
+    readBenchmarkData(benchmark_file);
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");

@@ -25,6 +25,14 @@ ros::Publisher pub_extrinsic;
 
 ros::Publisher pub_image_track;
 
+////////////////////////////////
+// add by Shengkai
+// pub_benchmark for performance analysis
+ros::Publisher pub_benchmark_odometry;
+ros::Publisher pub_benchmark_path;
+//vector<BenchmarkData> benchmark_data;
+////////////////////////////////
+
 CameraPoseVisualization cameraposevisual(1, 0, 0, 1);
 static double sum_of_path = 0;
 static Vector3d last_path(0.0, 0.0, 0.0);
@@ -45,6 +53,12 @@ void registerPub(ros::NodeHandle &n)
     pub_keyframe_point = n.advertise<sensor_msgs::PointCloud>("keyframe_point", 1000);
     pub_extrinsic = n.advertise<nav_msgs::Odometry>("extrinsic", 1000);
     pub_image_track = n.advertise<sensor_msgs::Image>("image_track", 1000);
+    //////////////////////////////
+    // add by Shengkai
+    // pub_benchmark for performance analysis
+    pub_benchmark_odometry = n.advertise<nav_msgs::Odometry>("benchmark_odometry", 1000);
+    pub_benchmark_path = n.advertise<nav_msgs::Path>("benchmark_path", 1000);
+    //////////////////////////////
 
     cameraposevisual.setScale(0.1);
     cameraposevisual.setLineWidth(0.01);
@@ -411,4 +425,12 @@ void pubKeyframe(const Estimator &estimator)
         }
         pub_keyframe_point.publish(point_cloud);
     }
+}
+
+//////////////////////////////
+// add by Shengkai
+// pub_benchmark for performance analysis
+void pubBenchmark(const Estimator &estimator, const std_msgs::Header &header, const std::vector<BenchmarkData> &benchmark)
+{
+    
 }
