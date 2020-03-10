@@ -305,6 +305,159 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     return featureFrame;
 }
 
+map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackTexturelessImage(double _cur_time, int textureless_track_num, const cv::Mat &_img)
+{
+    TicToc t_r;
+    cur_time = _cur_time;
+    cur_img = _img;
+    row = cur_img.rows;
+    col = cur_img.cols;
+    cv::Mat rightImg = cv::Mat();
+    cur_pts.clear();
+
+    if (prev_pts.size() > 0)
+    {
+        TicToc t_o;
+        vector<uchar> status;
+        vector<float> err;
+        if(hasPrediction)
+        {
+            cur_pts = predict_pts;
+            cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 1, 
+            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
+            
+            int succ_num = 0;
+            for (size_t i = 0; i < status.size(); i++)
+            {
+                if (status[i])
+                    succ_num++;
+            }
+            if (succ_num < 10)
+               cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
+        }
+        else
+            cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
+        // reverse check
+        if(FLOW_BACK)
+        {
+            vector<uchar> reverse_status;
+            vector<cv::Point2f> reverse_pts = prev_pts;
+            cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 1, 
+            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
+            //cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 3); 
+            for(size_t i = 0; i < status.size(); i++)
+            {
+                if(status[i] && reverse_status[i] && distance(prev_pts[i], reverse_pts[i]) <= 0.5)
+                {
+                    status[i] = 1;
+                }
+                else
+                    status[i] = 0;
+            }
+        }
+        
+        for (int i = 0; i < int(cur_pts.size()); i++)
+            if (status[i] && !inBorder(cur_pts[i]))
+                status[i] = 0;
+        reduceVector(prev_pts, status);
+        reduceVector(cur_pts, status);
+        reduceVector(ids, status);
+        reduceVector(track_cnt, status);
+        ROS_DEBUG("temporal optical flow costs: %fms", t_o.toc());
+        //printf("track cnt %d\n", (int)ids.size());
+    }
+
+    for (auto &n : track_cnt)
+        n++;
+
+    if (1)
+    {
+        //rejectWithF();
+        ROS_DEBUG("set mask begins");
+        TicToc t_m;
+        setMask();
+        ROS_DEBUG("set mask costs %fms", t_m.toc());
+
+        ROS_DEBUG("detect feature begins");
+        TicToc t_t;
+        int n_max_cnt = MAX_CNT - static_cast<int>(cur_pts.size());
+        if (n_max_cnt > 0)
+        {
+            if(mask.empty())
+                cout << "mask is empty " << endl;
+            if (mask.type() != CV_8UC1)
+                cout << "mask type wrong " << endl;
+            cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
+        }
+        else
+            n_pts.clear();
+        ROS_DEBUG("detect feature costs: %f ms", t_t.toc());
+        ///////////////////////////////////////////////////////////////////
+        // limite the number of tracked features to the textureless_track_num to 
+        // mimic a textureless situation
+        int origin_feature_num = n_pts.size();
+        std::vector<cv::Point2f> textureless_n_pts;
+        for (auto &p : n_pts)
+        {
+            textureless_n_pts.push_back(p);
+            if(textureless_n_pts.size() == textureless_track_num)
+                break;
+        }
+        n_pts = textureless_n_pts;
+        printf("feature cut from %d to %d\n", origin_feature_num, (int)n_pts.size());
+        /////////////////////////////////////////////////////////////////
+        for (auto &p : n_pts)
+        {
+            cur_pts.push_back(p);
+            ids.push_back(n_id++);
+            track_cnt.push_back(1);
+        }
+        //printf("feature cnt after add %d\n", (int)ids.size());
+    }
+
+    cur_un_pts = undistortedPts(cur_pts, m_camera[0]);
+    pts_velocity = ptsVelocity(ids, cur_un_pts, cur_un_pts_map, prev_un_pts_map);
+
+    if(SHOW_TRACK)
+        drawTrack(cur_img, rightImg, ids, cur_pts, cur_right_pts, prevLeftPtsMap);
+
+    prev_img = cur_img;
+    prev_pts = cur_pts;
+    prev_un_pts = cur_un_pts;
+    prev_un_pts_map = cur_un_pts_map;
+    prev_time = cur_time;
+    hasPrediction = false;
+
+    prevLeftPtsMap.clear();
+    for(size_t i = 0; i < cur_pts.size(); i++)
+        prevLeftPtsMap[ids[i]] = cur_pts[i];
+
+    map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
+    for (size_t i = 0; i < ids.size(); i++)
+    {
+        int feature_id = ids[i];
+        double x, y ,z;
+        x = cur_un_pts[i].x;
+        y = cur_un_pts[i].y;
+        z = 1;
+        double p_u, p_v;
+        p_u = cur_pts[i].x;
+        p_v = cur_pts[i].y;
+        int camera_id = 0;
+        double velocity_x, velocity_y;
+        velocity_x = pts_velocity[i].x;
+        velocity_y = pts_velocity[i].y;
+
+        Eigen::Matrix<double, 7, 1> xyz_uv_velocity;
+        xyz_uv_velocity << x, y, z, p_u, p_v, velocity_x, velocity_y;
+        featureFrame[feature_id].emplace_back(camera_id,  xyz_uv_velocity);
+    }
+
+    return featureFrame;
+}
+
+
+
 void FeatureTracker::rejectWithF()
 {
     if (cur_pts.size() >= 8)

@@ -157,14 +157,33 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     }
 }
 
+/*******************************************************
+ * Changed by Shengkai Zhang, Huazhong University of Science and Technology
+ * 
+ * This function is changed to mimic textureless environments.
+ * A cammera can only track a very limited number of features.
+ * The initialization phase is in a texture-rich venue.
+ * 
+ * Licensed under the GNU General Public License v3.0;
+ * you may not use this file except in compliance with the License.
+ *******************************************************/
+
 void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
 {
     inputImageCnt++;
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
-
+    
     if(_img1.empty())
-        featureFrame = featureTracker.trackImage(t, _img);
+    {
+        if(solver_flag == NON_LINEAR && TEXTURELESS)
+        {
+            int textureless_track_num = 10;
+            featureFrame = featureTracker.trackTexturelessImage(t, textureless_track_num, _img);
+        }
+        else
+            featureFrame = featureTracker.trackImage(t, _img);
+    }
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
     //printf("featureTracker time: %f\n", featureTrackerTime.toc());
