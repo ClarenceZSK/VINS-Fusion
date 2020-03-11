@@ -400,7 +400,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackTe
         for (auto &p : n_pts)
         {
             textureless_n_pts.push_back(p);
-            if(textureless_n_pts.size() == textureless_track_num)
+            if((int)textureless_n_pts.size() == textureless_track_num)
                 break;
         }
         n_pts.clear();

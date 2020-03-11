@@ -237,15 +237,15 @@ int main(int argc, char **argv)
 
     string config_file = argv[1];
     printf("config_file: %s\n", argv[1]);
+    //string benchmark_file = argv[2];
+    //printf("benchmark_file: %s\n", argv[2]);
 
     readParameters(config_file);
     estimator.setParameter();
     //////////////////////////////
     // add by Shengkai
     // pub_benchmark for performance analysis
-    string benchmark_file = argv[2];
-    printf("benchmark_file: %s\n", argv[2]);
-    readBenchmarkData(benchmark_file);
+    //readBenchmarkData(benchmark_file);
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");
